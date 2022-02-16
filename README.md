@@ -16,14 +16,6 @@ Multiple URLs:
 cat urls.txt | dwlr
 ```
 
-## Example tool chain
-
-Get all subdomains of google, test if responds, crawl all, get all js files and them download all.
-
-```
-subfinder -all -d google.com -silent | httpx -silent | hakrawler -subs -u | getJS --complete | dwlr
-```
-
 ## Installation
 
 First, you'll need to [install go](https://golang.org/doc/install).
