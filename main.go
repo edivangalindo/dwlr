@@ -1,7 +1,11 @@
+/*
+	Copyright © 2022 edivangalindo
+*/
 package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,7 +15,7 @@ import (
 )
 
 func main() {
-	maxGoRoutines := 50
+	threads := flag.Int("t", 50, "Number of threads to utilise.")
 
 	// Check for stdin input
 	stat, _ := os.Stdin.Stat()
@@ -20,17 +24,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	sem := make(chan bool, maxGoRoutines)
+	results := make(chan string, *threads)
 
-	s := bufio.NewScanner(os.Stdin)
+	go func() {
 
-	for s.Scan() {
-		sem <- true
-		go func() {
-
-			defer func() { <-sem }()
-			// Read urls from stdin
-
+		// Read urls from stdin
+		s := bufio.NewScanner(os.Stdin)
+		for s.Scan() {
 			url := s.Text()
 
 			hostname, filename, err := extract(url)
@@ -41,18 +41,28 @@ func main() {
 
 			// Download the url
 			resp, err := grab.Get("./dwlr/"+hostname+"/"+filename, url)
-
 			if err != nil {
-				return
+				fmt.Println(err)
 			}
 
-			fmt.Println(resp.Filename)
+			printResult("Downloaded: "+resp.Filename, results)
+		}
 
-			if err := s.Err(); err != nil {
-				fmt.Fprintln(os.Stderr, "Error reading standard input:", err)
-				os.Exit(1)
-			}
-		}()
+		close(results)
+	}()
+
+	w := bufio.NewWriter(os.Stdout)
+	defer w.Flush()
+
+	for res := range results {
+		fmt.Fprintln(w, res)
+	}
+}
+
+func printResult(url string, results chan string) {
+	result := url
+	if result != "" {
+		results <- result
 	}
 }
 
